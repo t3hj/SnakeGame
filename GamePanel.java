@@ -34,7 +34,7 @@ public class GamePanel extends JPanel implements ActionListener {
     private GameState gameState; // Current state of the game
 
     public GamePanel() {
-        this.setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        this.setPreferredSize(new Dimension(WIDTH, HEIGHT + UNIT_SIZE));
         this.setBackground(Color.BLACK);
         this.setFocusable(true);
         this.addKeyListener(new KeyAdapter() {
@@ -144,8 +144,9 @@ public class GamePanel extends JPanel implements ActionListener {
         Random random = new Random();
     
         while (!spawnValid) {
-            foodX = random.nextInt((WIDTH / UNIT_SIZE - 1)) * UNIT_SIZE; // Adjusted to prevent spawning at the edge
-            foodY = random.nextInt((HEIGHT / UNIT_SIZE - 1)) * UNIT_SIZE; // Adjusted to prevent spawning at the edge
+            // Adjusted to prevent spawning on the edge by subtracting UNIT_SIZE from maximum value
+            foodX = random.nextInt((WIDTH / UNIT_SIZE - 1)) * UNIT_SIZE;
+            foodY = random.nextInt((HEIGHT / UNIT_SIZE - 1)) * UNIT_SIZE;
     
             // Check if food spawns on the snake
             spawnValid = true;
@@ -155,10 +156,9 @@ public class GamePanel extends JPanel implements ActionListener {
                     break;
                 }
             }
-    
-            // No need to check bounds here since we already adjusted the spawning range
         }
     }
+    
     
 
     @Override
@@ -174,12 +174,12 @@ public class GamePanel extends JPanel implements ActionListener {
                 g.setFont(new Font("Arial", Font.PLAIN, 40));
                 String welcomeText = "Welcome to Tehj's Snake Game";
                 int welcomeTextWidth = g.getFontMetrics().stringWidth(welcomeText);
-                g.drawString(welcomeText, (WIDTH - welcomeTextWidth) / 2, HEIGHT / 2 - 60); // Centered
+                g.drawString(welcomeText, (WIDTH - welcomeTextWidth) / 2, HEIGHT / 2 - 100); // Centered
     
                 g.setFont(new Font("Arial", Font.PLAIN, 20));
                 String chooseColorText = "Choose snake color and press Start!";
                 int chooseColorTextWidth = g.getFontMetrics().stringWidth(chooseColorText);
-                g.drawString(chooseColorText, (WIDTH - chooseColorTextWidth) / 2, HEIGHT / 2 + 20); // Centered and moved lower
+                g.drawString(chooseColorText, (WIDTH - chooseColorTextWidth) / 2, HEIGHT / 2 + 30); // Centered and moved lower
                 break;
             case PLAYING:
                 if (paused) {
