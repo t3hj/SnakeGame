@@ -5,12 +5,17 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.Random;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import java.io.File;
+import java.io.IOException;
 
 public class GamePanel extends JPanel implements ActionListener {
     private final int WIDTH = 800;
     private final int HEIGHT = 600;
     private final int UNIT_SIZE = 20;
     private final int GAME_UNITS = (WIDTH * HEIGHT) / (UNIT_SIZE * UNIT_SIZE);
+    private final int INITIAL_DELAY = 100; // Initial delay for the timer
 
     private int[] snakeX = new int[GAME_UNITS];
     private int[] snakeY = new int[GAME_UNITS];
@@ -25,6 +30,11 @@ public class GamePanel extends JPanel implements ActionListener {
     private JButton colorButton; // Button for color selection
     private JButton startButton; // Start button
     private Color snakeColor; // Color for the snake
+    private int highScore = 0; // Variable to track high score
+    private JLabel scoreLabel;
+    private JLabel highScoreLabel;
+    private Image backgroundImage;
+    private JButton playAgainButton; // Button for playing again
 
     // Game state
     private enum GameState {
@@ -87,7 +97,7 @@ public class GamePanel extends JPanel implements ActionListener {
                 restartGame();
             }
         });
-        restartButton.setVisible(false); // Hide button initially
+        restartButton.setVisible(false); // Hide restart button initially
         this.add(restartButton);
 
         // Initialize and set up the start button
@@ -105,6 +115,11 @@ public class GamePanel extends JPanel implements ActionListener {
         // Set initial game state to WELCOME
         gameState = GameState.WELCOME;
         displayWelcomeScreen();
+        timer = new Timer(INITIAL_DELAY, this); // Initialize timer with initial delay
+        loadSounds(); // Load sound effects
+        loadBackgroundImage();
+        setupScoreboard();
+        setupPlayAgainButton();
     }
 
     // Method to open the color chooser dialog
@@ -131,7 +146,7 @@ public class GamePanel extends JPanel implements ActionListener {
         snakeLength = 1;
         direction = 'R';
         spawnFood();
-        timer = new Timer(100, this);
+        timer.setDelay(INITIAL_DELAY); // Reset timer delay to initial value
         timer.start();
         restartButton.setVisible(false); // Hide restart button during the game
         colorButton.setVisible(false); // Hide color button during the game
@@ -144,9 +159,9 @@ public class GamePanel extends JPanel implements ActionListener {
         Random random = new Random();
     
         while (!spawnValid) {
-            // Adjusted to prevent spawning on the edge by subtracting UNIT_SIZE from maximum value
-            foodX = random.nextInt((WIDTH / UNIT_SIZE - 1)) * UNIT_SIZE;
-            foodY = random.nextInt((HEIGHT / UNIT_SIZE - 1)) * UNIT_SIZE;
+            // Ensure food spawns within the bounds and not on the edge
+            foodX = random.nextInt((WIDTH / UNIT_SIZE - 2)) * UNIT_SIZE + UNIT_SIZE;
+            foodY = random.nextInt((HEIGHT / UNIT_SIZE - 2)) * UNIT_SIZE + UNIT_SIZE;
     
             // Check if food spawns on the snake
             spawnValid = true;
@@ -159,11 +174,71 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
     
-    
+    private void loadSounds() {
+        try {
+            Clip eatSound = AudioSystem.getClip();
+            eatSound.open(AudioSystem.getAudioInputStream(new File("eat.wav")));
+            Clip gameOverSound = AudioSystem.getClip();
+            gameOverSound.open(AudioSystem.getAudioInputStream(new File("gameover.wav")));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void playSound(String soundFile) {
+        try {
+            System.out.println("Attempting to play sound: " + soundFile); // Debugging statement
+            Clip clip = AudioSystem.getClip();
+            clip.open(AudioSystem.getAudioInputStream(new File(soundFile)));
+            clip.start();
+            System.out.println("Sound played: " + soundFile); // Debugging statement
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadBackgroundImage() {
+        try {
+            backgroundImage = new ImageIcon("background.jpg").getImage();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void setupScoreboard() {
+        scoreLabel = new JLabel("Score: 0");
+        scoreLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        scoreLabel.setForeground(Color.WHITE);
+        scoreLabel.setBounds(10, 10, 200, 30);
+        this.add(scoreLabel);
+
+        highScoreLabel = new JLabel("High Score: 0");
+        highScoreLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        highScoreLabel.setForeground(Color.WHITE);
+        highScoreLabel.setBounds(600, 10, 200, 30);
+        this.add(highScoreLabel);
+    }
+
+    private void setupPlayAgainButton() {
+        playAgainButton = new JButton("Play Again");
+        playAgainButton.setBounds(WIDTH / 2 - 100, HEIGHT / 2 + 60, 200, 30);
+        playAgainButton.setFocusable(false);
+        playAgainButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                restartGame();
+            }
+        });
+        this.add(playAgainButton);
+        playAgainButton.setVisible(false); // Hide button initially
+    }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        if (backgroundImage != null) {
+            g.drawImage(backgroundImage, 0, 0, this);
+        }
         draw(g);
     }
 
@@ -177,9 +252,9 @@ public class GamePanel extends JPanel implements ActionListener {
                 g.drawString(welcomeText, (WIDTH - welcomeTextWidth) / 2, HEIGHT / 2 - 100); // Centered
     
                 g.setFont(new Font("Arial", Font.PLAIN, 20));
-                String chooseColorText = "Choose snake color and press Start!";
-                int chooseColorTextWidth = g.getFontMetrics().stringWidth(chooseColorText);
-                g.drawString(chooseColorText, (WIDTH - chooseColorTextWidth) / 2, HEIGHT / 2 + 30); // Centered and moved lower
+                String instructions = "Use arrow keys to move, P to pause. Choose snake color and press Start!";
+                int instructionsWidth = g.getFontMetrics().stringWidth(instructions);
+                g.drawString(instructions, (WIDTH - instructionsWidth) / 2, HEIGHT / 2 + 30); // Centered and moved lower
                 break;
             case PLAYING:
                 if (paused) {
@@ -199,19 +274,36 @@ public class GamePanel extends JPanel implements ActionListener {
                         g.fillRect(snakeX[i], snakeY[i], UNIT_SIZE, UNIT_SIZE);
                     }
 
-                    g.setColor(Color.WHITE);
-                    g.setFont(new Font("Arial", Font.PLAIN, 40));
-                    g.drawString("Score: " + (snakeLength - 1), WIDTH - 200, 40);
+                    scoreLabel.setText("Score: " + (snakeLength - 1));
+                    highScoreLabel.setText("High Score: " + highScore);
                 }
                 break;
             case GAME_OVER:
+                // Draw a semi-transparent overlay
+                g.setColor(new Color(0, 0, 0, 150));
+                g.fillRect(0, 0, WIDTH, HEIGHT);
+
+                // Draw the game over text
                 g.setColor(Color.RED);
-                g.setFont(new Font("Arial", Font.PLAIN, 40));
-                g.drawString("Game Over!", WIDTH / 3, HEIGHT / 3);
-                g.setFont(new Font("Arial", Font.PLAIN, 20));
-                g.drawString("Score: " + (snakeLength - 1), WIDTH / 2 - 40, HEIGHT / 2);
-                restartButton.setVisible(true); // Show restart button on game over
-                colorButton.setVisible(true); // Show color button on game over
+                g.setFont(new Font("Arial", Font.BOLD, 60));
+                String gameOverText = "Game Over!";
+                int gameOverTextWidth = g.getFontMetrics().stringWidth(gameOverText);
+                g.drawString(gameOverText, (WIDTH - gameOverTextWidth) / 2, HEIGHT / 2 - 100);
+
+                // Draw the score and high score
+                g.setFont(new Font("Arial", Font.PLAIN, 30));
+                String scoreText = "Score: " + (snakeLength - 1);
+                int scoreTextWidth = g.getFontMetrics().stringWidth(scoreText);
+                g.drawString(scoreText, (WIDTH - scoreTextWidth) / 2, HEIGHT / 2);
+
+                String highScoreText = "High Score: " + highScore;
+                int highScoreTextWidth = g.getFontMetrics().stringWidth(highScoreText);
+                g.drawString(highScoreText, (WIDTH - highScoreTextWidth) / 2, HEIGHT / 2 + 40);
+
+                // Show the play again button
+                playAgainButton.setVisible(true);
+                restartButton.setVisible(false); // Hide restart button
+                colorButton.setVisible(false); // Hide color button
                 break;
         }
     }
@@ -242,6 +334,7 @@ public class GamePanel extends JPanel implements ActionListener {
         if (snakeX[0] == foodX && snakeY[0] == foodY) {
             snakeLength++;
             spawnFood();
+            playSound("/Sounds/eat.wav"); // Play sound when food is eaten
         }
     }
 
@@ -261,6 +354,10 @@ public class GamePanel extends JPanel implements ActionListener {
         }
 
         if (!running) {
+            playSound("/Sounds/gameover.wav"); // Play sound on game over
+            if (snakeLength - 1 > highScore) {
+                highScore = snakeLength - 1; // Update high score
+            }
             timer.stop(); // Stop the timer if the game is over
         }
     }
@@ -286,10 +383,12 @@ public class GamePanel extends JPanel implements ActionListener {
         paused = false; // Reset paused state
         gameState = GameState.WELCOME; // Reset game state to WELCOME
         spawnFood();
+        timer.setDelay(INITIAL_DELAY); // Reset timer delay to initial value
         timer.start(); // Restart the timer
         restartButton.setVisible(false); // Hide restart button after restart
         colorButton.setVisible(false); // Hide color button after restart
         startButton.setVisible(true); // Show start button after restart
+        playAgainButton.setVisible(false); // Hide play again button after restart
         displayWelcomeScreen(); // Show welcome screen again
         repaint();
     }
