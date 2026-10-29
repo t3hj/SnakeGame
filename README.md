@@ -64,3 +64,13 @@ A customizable and classic Snake Game developed in Java Swing, featuring modern 
 ## Contributing
 
 Fork the repository and submit a pull request to contribute features or improvements. Feedback and suggestions are always welcome!
+
+
+## Browser demo
+
+Hosted demo: https://t3hj.github.io/portfolio-website/demos/SnakeGame/
+
+The `web/` directory contains a browser adaptation of this desktop project. The original implementation remains unchanged. This demo focuses on the core interactive features; it does not run the Python/Java desktop runtime.
+
+Serve `web/` with a static web server for local preview. The hosted copy is deployed through the portfolio's existing GitHub Pages site; enabling Pages on this repository is optional.
+
